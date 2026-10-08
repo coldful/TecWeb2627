@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Jogo local de Alquerque">
+  <title>Alquerque — jogo local</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#game" aria-label="Alquerque, início">ALQUERQUE <span>•</span></a>
+    <p class="tagline">Estratégia, saltos e captura</p>
+    <button class="text-button" id="rules-button" type="button">Como jogar</button>
+  </header>
+
+  <main class="layout" id="game">
+    <aside class="panel settings" aria-labelledby="settings-title">
+      <h1 id="settings-title">Nova partida</h1>
+      <form id="settings-form">
+        <fieldset>
+          <legend>Modo</legend>
+          <label><input type="radio" name="mode" value="local" checked> Dois jogadores (local)</label>
+          <label class="muted"><input type="radio" name="mode" value="computer" disabled> Contra o computador <small>em breve</small></label>
+        </fieldset>
+        <fieldset>
+          <legend>Primeiro a jogar</legend>
+          <label><input type="radio" name="first-player" value="white" checked> Peças claras</label>
+          <label><input type="radio" name="first-player" value="black"> Peças escuras</label>
+        </fieldset>
+        <fieldset>
+          <legend>Nível do computador</legend>
+          <label class="muted" for="level">Indisponível nesta versão</label>
+          <select id="level" disabled><option>Fácil</option><option>Médio</option><option>Difícil</option></select>
+        </fieldset>
+        <button class="primary" type="submit">Começar partida</button>
+      </form>
+
+      <section class="login" aria-labelledby="login-title">
+        <h2 id="login-title">Identificação</h2>
+        <label for="username">Utilizador</label>
+        <input id="username" type="text" autocomplete="username" placeholder="nome do jogador">
+        <label for="password">Palavra-passe</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+        <button type="button" id="login-button">Entrar</button>
+        <p class="small">A autenticação será ligada numa próxima entrega.</p>
+      </section>
+    </aside>
+
+    <section class="game-area" aria-labelledby="game-title">
+      <div class="game-heading">
+        <div><p class="eyebrow">PARTIDA LOCAL</p><h2 id="game-title">Tabuleiro</h2></div>
+        <div class="turn-card" id="turn-card" aria-live="polite"><span class="turn-dot white"></span><span>Claras jogam</span></div>
+      </div>
+      <div class="players" aria-label="Peças restantes">
+        <div><span class="piece-count white-piece"></span><strong>Claras</strong><span id="white-count">12 peças</span></div>
+        <div><span class="piece-count black-piece"></span><strong>Escuras</strong><span id="black-count">12 peças</span></div>
+      </div>
+      <div class="board-wrap">
+        <div id="board" class="board" aria-label="Tabuleiro Alquerque" role="grid"></div>
+      </div>
+      <div id="message" class="message info" role="status" aria-live="polite">Claras começam. Selecione uma peça.</div>
+      <div class="commands" aria-label="Comandos da partida">
+        <button type="button" id="draw-button">Propor empate</button>
+        <button type="button" id="resign-button" class="danger">Desistir</button>
+        <button type="button" id="scores-button">Classificações</button>
+      </div>
+    </section>
+
+    <aside class="panel guide" aria-labelledby="guide-title">
+      <h2 id="guide-title">Nesta ronda</h2>
+      <ol>
+        <li>Selecione uma peça da cor da vez.</li>
+        <li>Os pontos destacados são destinos possíveis.</li>
+        <li>Um salto sobre uma peça adversária captura-a.</li>
+      </ol>
+      <div class="tip"><strong>Captura obrigatória</strong><br>Se houver um salto disponível, faça a captura. Após saltar, continue enquanto puder.</div>
+      <button id="rules-inline-button" type="button" class="text-button">Ver regras completas →</button>
+    </aside>
+  </main>
+
+  <dialog id="rules-dialog" aria-labelledby="rules-title">
+    <div class="dialog-head"><h2 id="rules-title">Regras do Alquerque</h2><button type="button" class="close" data-close="rules-dialog" aria-label="Fechar">×</button></div>
+    <div class="dialog-content">
+      <p>Cada jogador começa com 12 peças; o ponto central fica vazio. As claras avançam para cima e as escuras para baixo.</p>
+      <h3>Movimento</h3><p>Mova uma peça para um ponto adjacente ligado por uma linha, sem recuar para a fila inicial. Na última fila, uma peça move-se apenas na horizontal.</p>
+      <h3>Captura</h3><p>Salte uma peça adversária para o ponto vazio seguinte na mesma linha. Uma captura é obrigatória e pode seguir em qualquer direção. Numa sequência não pode atravessar duas vezes o mesmo ponto nem capturar a mesma peça.</p>
+      <h3>Fim</h3><p>Perde quem ficar sem peças ou sem movimentos. O empate exige acordo dos dois jogadores. A regra do sopro está indicada nas regras do jogo, mas não é necessária quando as capturas obrigatórias são aplicadas pela interface.</p>
+    </div>
+  </dialog>
+
+  <dialog id="draw-dialog" aria-labelledby="draw-title">
+    <div class="dialog-head"><h2 id="draw-title">Proposta de empate</h2><button type="button" class="close" data-close="draw-dialog" aria-label="Fechar">×</button></div>
+    <p id="draw-text">O outro jogador aceita o empate?</p>
+    <div class="dialog-actions"><button type="button" id="accept-draw" class="primary">Aceitar empate</button><button type="button" data-close="draw-dialog">Continuar a jogar</button></div>
+  </dialog>
+
+  <dialog id="scores-dialog" aria-labelledby="scores-title">
+    <div class="dialog-head"><h2 id="scores-title">Classificações locais</h2><button type="button" class="close" data-close="scores-dialog" aria-label="Fechar">×</button></div>
+    <p class="small">Resultados guardados neste navegador.</p>
+    <table><thead><tr><th>Resultado</th><th>Vencedor</th><th>Data</th></tr></thead><tbody id="scores-body"></tbody></table>
+  </dialog>
+
+  <script src="game.js"></script>
+</body>
+</html>
