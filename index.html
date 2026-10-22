@@ -10,7 +10,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="#game" aria-label="Alquerque, início">ALQUERQUE <span>•</span></a>
-    <p class="tagline">Estratégia, saltos e captura</p>
+    <span class="header-spacer" aria-hidden="true"></span>
     <button class="text-button" id="rules-button" type="button">Como jogar</button>
   </header>
 
@@ -21,22 +21,16 @@
         <fieldset>
           <legend>Modo</legend>
           <label><input type="radio" name="mode" value="local" checked> Dois jogadores (local)</label>
-          <label class="muted"><input type="radio" name="mode" value="computer" disabled> Contra o computador <small>em breve</small></label>
         </fieldset>
         <fieldset>
           <legend>Primeiro a jogar</legend>
           <label><input type="radio" name="first-player" value="white" checked> Peças claras</label>
           <label><input type="radio" name="first-player" value="black"> Peças escuras</label>
         </fieldset>
-        <fieldset>
-          <legend>Nível do computador</legend>
-          <label class="muted" for="level">Indisponível nesta versão</label>
-          <select id="level" disabled><option>Fácil</option><option>Médio</option><option>Difícil</option></select>
-        </fieldset>
         <button class="primary" type="submit">Começar partida</button>
       </form>
 
-      <section class="login" aria-labelledby="login-title">
+      <section class="login" aria-labelledby="login-title" hidden>
         <h2 id="login-title">Identificação</h2>
         <label for="username">Utilizador</label>
         <input id="username" type="text" autocomplete="username" placeholder="nome do jogador">
@@ -52,10 +46,6 @@
         <div><p class="eyebrow">PARTIDA LOCAL</p><h2 id="game-title">Tabuleiro</h2></div>
         <div class="turn-card" id="turn-card" aria-live="polite"><span class="turn-dot white"></span><span>Claras jogam</span></div>
       </div>
-      <div class="players" aria-label="Peças restantes">
-        <div><span class="piece-count white-piece"></span><strong>Claras</strong><span id="white-count">12 peças</span></div>
-        <div><span class="piece-count black-piece"></span><strong>Escuras</strong><span id="black-count">12 peças</span></div>
-      </div>
       <div class="board-wrap">
         <div id="board" class="board" aria-label="Tabuleiro Alquerque" role="grid"></div>
       </div>
@@ -67,16 +57,6 @@
       </div>
     </section>
 
-    <aside class="panel guide" aria-labelledby="guide-title">
-      <h2 id="guide-title">Nesta ronda</h2>
-      <ol>
-        <li>Selecione uma peça da cor da vez.</li>
-        <li>Os pontos destacados são destinos possíveis.</li>
-        <li>Um salto sobre uma peça adversária captura-a.</li>
-      </ol>
-      <div class="tip"><strong>Captura obrigatória</strong><br>Se houver um salto disponível, faça a captura. Após saltar, continue enquanto puder.</div>
-      <button id="rules-inline-button" type="button" class="text-button">Ver regras completas →</button>
-    </aside>
   </main>
 
   <dialog id="rules-dialog" aria-labelledby="rules-title">

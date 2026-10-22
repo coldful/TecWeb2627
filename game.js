@@ -67,7 +67,6 @@ function createBoard() {
 }
 function legalMovesForSelected() { if(game.selected === null) return []; const captures=game.destinations(game.selected,true); return captures.length ? captures : (game.chainVisited.size ? [] : game.destinations(game.selected)); }
 function render() {
-  byId("white-count").textContent=`${game.count(WHITE)} peças`; byId("black-count").textContent=`${game.count(BLACK)} peças`;
   const turnCard=byId("turn-card"); turnCard.innerHTML=`<span class="turn-dot ${game.turn}"></span><span>${game.finished ? "Partida terminada" : `${playerName(game.turn)} jogam`}</span>`;
   const legal=new Map(legalMovesForSelected().map(move=>[move.to,move]));
   document.querySelectorAll(".point").forEach(point=>{ const index=Number(point.dataset.index), piece=game.board[index]; point.classList.toggle("selected",index===game.selected); point.classList.toggle("legal",legal.has(index)); point.disabled=game.finished; point.replaceChildren(); if(piece){const stone=document.createElement("span"); stone.className=`piece ${piece}-piece`; stone.setAttribute("aria-hidden","true"); point.append(stone); point.setAttribute("aria-label",`${piece===WHITE?"peça clara":"peça escura"}, posição ${Math.floor(index/5)+1}, ${index%5+1}`);} });
@@ -84,7 +83,7 @@ function onPointClick(event) {
 function openDialog(id) { byId(id).showModal(); }
 function renderScores() { const scores=JSON.parse(localStorage.getItem("alquerque-scores")||"[]"); const body=byId("scores-body"); body.replaceChildren(); if(!scores.length){const row=body.insertRow();const cell=row.insertCell();cell.colSpan=3;cell.textContent="Ainda não há partidas terminadas.";return;} scores.forEach(score=>{const row=body.insertRow(); [score.result,score.winner,score.date].forEach(value=>row.insertCell().textContent=value);}); }
 byId("settings-form").addEventListener("submit",event=>{event.preventDefault(); game.start(document.querySelector('input[name="first-player"]:checked').value); createBoard(); setMessage(`${playerName(game.turn)} começam. Selecione uma peça.`); render();});
-byId("rules-button").addEventListener("click",()=>openDialog("rules-dialog")); byId("rules-inline-button").addEventListener("click",()=>openDialog("rules-dialog"));
+byId("rules-button").addEventListener("click",()=>openDialog("rules-dialog"));
 byId("draw-button").addEventListener("click",()=>{if(!game.finished)openDialog("draw-dialog");}); byId("accept-draw").addEventListener("click",()=>{byId("draw-dialog").close();finish("empate");});
 byId("resign-button").addEventListener("click",()=>{if(!game.finished&&window.confirm(`${playerName(game.turn)} desistem da partida?`))finish("desistência",opponent(game.turn));});
 byId("scores-button").addEventListener("click",()=>{renderScores();openDialog("scores-dialog");});
