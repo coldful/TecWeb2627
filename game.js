@@ -1,22 +1,443 @@
 "use strict";
-const SIZE=5,WHITE="white",BLACK="black",HUMAN=WHITE,COMPUTER=BLACK;
-const opponent=c=>c===WHITE?BLACK:WHITE,byId=id=>document.getElementById(id);
-const style=document.createElement("style");style.textContent=".point.blowable{box-shadow:0 0 0 4px #e53935,0 0 12px #e53935!important;border-radius:50%;animation:pulse .8s infinite alternate;z-index:10}@keyframes pulse{to{box-shadow:0 0 0 6px #ff1744,0 0 18px #ff1744}}";document.head.append(style);
-class AlquerqueGame{constructor(){this.start(HUMAN)}start(first){this.board=[BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,BLACK,null,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE,WHITE];this.turn=first;this.selected=null;this.chainVisited=new Set;this.blowable=new Set;this.finished=false}index(r,c){return r*SIZE+c}position(i){return[Math.floor(i/SIZE),i%SIZE]}connected(a,b){const[r,c]=this.position(a),[x,y]=this.position(b),dr=Math.abs(x-r),dc=Math.abs(y-c);return dr+dc===1||dr===1&&dc===1&&(r+c)%2===0}destinations(from,captureOnly=false){return destinationsOn(this.board,from,captureOnly,this.chainVisited)}allCaptures(color){return this.board.flatMap((p,from)=>p===color?this.destinations(from,true).map(m=>({from,...m})):[])}allMoves(color){return this.board.flatMap((p,from)=>p===color?this.destinations(from).map(m=>({from,...m})):[])}apply(m){const p=this.board[m.from];this.board[m.to]=p;this.board[m.from]=null;if(m.capture!==null)this.board[m.capture]=null}}
-const game=new AlquerqueGame;let computerThinking=false,chainTimer=null;
-function destinationsOn(board,from,captureOnly=false,visited=new Set){const p=board[from];if(!p)return[];const[r,c]=game.position(from),moves=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const ar=r+dr,ac=c+dc;if(ar<0||ar>=SIZE||ac<0||ac>=SIZE)continue;const adjacent=game.index(ar,ac);if(!game.connected(from,adjacent))continue;if(board[adjacent]===opponent(p)){const jr=r+2*dr,jc=c+2*dc;if(jr>=0&&jr<SIZE&&jc>=0&&jc<SIZE){const to=game.index(jr,jc);if(game.connected(adjacent,to)&&!board[to]&&!visited.has(to))moves.push({to,capture:adjacent})}}else if(!captureOnly&&!board[adjacent]){const valid=p===WHITE?dr<=0:dr>=0,final=p===WHITE?r===0:r===SIZE-1;if(final?dr===0:valid)moves.push({to:adjacent,capture:null})}}return moves}
-const applyOn=(board,m)=>{const n=board.slice(),p=n[m.from];n[m.to]=p;n[m.from]=null;if(m.capture!==null)n[m.capture]=null;return n};
-function turnMoves(board,color){const first=[];board.forEach((p,from)=>{if(p===color)destinationsOn(board,from,true).forEach(m=>first.push({from,...m}))});if(!first.length)return board.flatMap((p,from)=>p===color?destinationsOn(board,from).map(m=>({steps:[{from,...m}],captures:0})):[]);const all=[],explore=(state,step,steps,seen)=>{const next=applyOn(state,step),v=new Set(seen);v.add(step.from);v.add(step.to);const after=destinationsOn(next,step.to,true,v);if(!after.length){all.push({steps:[...steps,step],captures:steps.length+1});return}after.forEach(m=>explore(next,{from:step.to,...m},[...steps,step],v))};first.forEach(m=>explore(board,m,[],new Set));return all}
-function evaluate(b){return(b.filter(p=>p===COMPUTER).length-b.filter(p=>p===HUMAN).length)*100+turnMoves(b,COMPUTER).length-turnMoves(b,HUMAN).length}
-function minimax(b,c,d,a=-Infinity,z=Infinity){const moves=turnMoves(b,c);if(!moves.length)return{score:c===COMPUTER?-1e5-d:1e5+d};if(!d)return{score:evaluate(b)};let best,score=c===COMPUTER?-Infinity:Infinity;for(const m of moves){const v=minimax(m.steps.reduce(applyOn,b),opponent(c),d-1,a,z).score;if(c===COMPUTER?v>score:v<score){score=v;best=m}if(c===COMPUTER)a=Math.max(a,score);else z=Math.min(z,score);if(z<=a)break}return{score,move:best}}
-const clearTimer=()=>{if(chainTimer!==null){clearTimeout(chainTimer);chainTimer=null}};function playerName(c){return c===WHITE?"Claras":"Escuras"}function message(t,k="info"){const e=byId("message");e.textContent=t;e.className=`message ${k}`}
-function createBoard(){const b=byId("board");b.replaceChildren();const svg=document.createElementNS("http://www.w3.org/2000/svg","svg"),line=(r,c,x,y)=>{const e=document.createElementNS("http://www.w3.org/2000/svg","line");e.setAttribute("x1",`${c*25}%`);e.setAttribute("y1",`${r*25}%`);e.setAttribute("x2",`${y*25}%`);e.setAttribute("y2",`${x*25}%`);svg.append(e)};for(let i=0;i<5;i++){line(i,0,i,4);line(0,i,4,i)}[[0,0,4,4],[0,4,4,0],[0,2,2,0],[0,2,2,4],[2,0,4,2],[2,4,4,2]].forEach(x=>line(...x));b.append(svg);for(let r=0;r<5;r++)for(let c=0;c<5;c++){const i=game.index(r,c),e=document.createElement("button");e.type="button";e.className="point";e.style.left=`${c*25}%`;e.style.top=`${r*25}%`;e.dataset.index=i;e.addEventListener("click",click);b.append(e)}}
-function legal(){return game.selected===null?[]:game.chainVisited.size?game.destinations(game.selected,true):game.destinations(game.selected)}
-function render(){const text=game.finished?"Partida terminada":game.turn===HUMAN?"A sua vez":"Computador joga";byId("turn-card").innerHTML=`<span class="turn-dot ${game.turn}"></span><span>${text}</span>`;const moves=new Set(legal().map(m=>m.to));document.querySelectorAll(".point").forEach(e=>{const i=+e.dataset.index,p=game.board[i];e.classList.toggle("selected",i===game.selected);e.classList.toggle("legal",moves.has(i));e.classList.toggle("blowable",game.blowable.has(i));e.disabled=game.finished||computerThinking||game.turn===COMPUTER;e.replaceChildren();if(p){const s=document.createElement("span");s.className=`piece ${p}-piece`;e.append(s)}})}
-function finish(result,winner){clearTimer();game.finished=true;game.blowable.clear();computerThinking=false;const scores=JSON.parse(localStorage.getItem("alquerque-scores")||"[]");scores.unshift({result,winner:winner?playerName(winner):"—",date:new Date().toLocaleDateString("pt-PT")});localStorage.setItem("alquerque-scores",JSON.stringify(scores.slice(0,12)));message(winner?`${winner===HUMAN?"Venceu":"O computador venceu"}!`:"Empate acordado.","success");render()}
-function changeTurn(blowable=[],note=null){clearTimer();game.selected=null;game.chainVisited.clear();game.blowable=new Set(blowable);game.turn=opponent(game.turn);if(!game.allMoves(game.turn).length&&!game.blowable.size)return finish("sem movimentos",opponent(game.turn));if(game.turn===COMPUTER){computerThinking=true;message(note||"O computador está a pensar…",note?"warning":"info");render();setTimeout(computerMove,note?1800:400)}else{message(note||"A sua vez. Selecione uma peça.",note?"warning":"info");render()}}
-function computerMove(){if(game.blowable.size){game.board[[...game.blowable][0]]=null;game.blowable.clear()}const hard=byId("difficulty").value!=="easy",moves=hard?turnMoves(game.board,COMPUTER):game.allMoves(COMPUTER);if(!moves.length)return finish("sem movimentos",HUMAN);let bad=[],note=null;if(!hard){const captures=new Set(game.allCaptures(COMPUTER).map(m=>m.from)),m=moves[Math.floor(Math.random()*moves.length)];game.apply(m);if(m.capture===null&&captures.size){bad=[...captures].map(i=>i===m.from?m.to:i);note=`O jogador ${playerName(COMPUTER)} não comeu uma peça; o jogador ${playerName(HUMAN)} pode soprar a peça.`}else if(m.capture!==null){game.chainVisited.add(m.from);game.chainVisited.add(m.to);let at=m.to,next=game.destinations(at,true);while(next.length&&Math.random()>=.5){const n=next[Math.floor(Math.random()*next.length)];n.from=at;game.apply(n);at=n.to;game.chainVisited.add(at);next=game.destinations(at,true)}if(next.length){bad=[at];note=`O jogador ${playerName(COMPUTER)} não concluiu uma captura múltipla; o jogador ${playerName(HUMAN)} pode soprar a peça.`}}}else minimax(game.board,COMPUTER,byId("difficulty").value==="hard"?5:3).move.steps.forEach(m=>game.apply(m));computerThinking=false;changeTurn(bad,note)}
-function click(ev){const i=+ev.currentTarget.dataset.index;if(game.finished||computerThinking||game.turn!==HUMAN)return;if(game.blowable.has(i)&&!game.chainVisited.size){game.board[i]=null;game.blowable.clear();message("Peça soprada! Continue o seu turno selecionando uma peça.","success");render();return}if(game.selected!==null){const m=legal().find(x=>x.to===i);if(m){clearTimer();m.from=game.selected;const captures=new Set(game.allCaptures(HUMAN).map(x=>x.from));game.blowable.clear();game.apply(m);if(m.capture!==null){game.chainVisited.add(m.from);game.chainVisited.add(m.to);game.selected=m.to;if(game.destinations(m.to,true).length){message("Captura feita! Tem 3 segundos para continuar a captura múltipla.","warning");render();chainTimer=setTimeout(()=>{if(game.selected!==null)changeTurn([game.selected],`O jogador ${playerName(HUMAN)} não concluiu uma captura múltipla; o jogador ${playerName(COMPUTER)} pode soprar a peça.`)},3000);return}changeTurn();return}const bad=captures.size?[...captures].map(x=>x===m.from?m.to:x):[],note=bad.length?`O jogador ${playerName(HUMAN)} não comeu uma peça; o jogador ${playerName(COMPUTER)} pode soprar a peça.`:null;changeTurn(bad,note);return}}if(game.chainVisited.size){message("Tem 3 segundos para continuar a sequência com a mesma peça!","warning");return}if(game.board[i]!==HUMAN){message("Selecione uma peça clara.","warning");return}game.selected=i;message(legal().length?"Escolha um ponto destacado.":"Esta peça não tem movimentos possíveis.");render()}
-function openDialog(id){byId(id).showModal()}function scores(){const body=byId("scores-body"),list=JSON.parse(localStorage.getItem("alquerque-scores")||"[]");body.replaceChildren();list.forEach(s=>{const r=body.insertRow();[s.result,s.winner,s.date].forEach(x=>r.insertCell().textContent=x)})}
-byId("settings-form").addEventListener("submit",e=>{e.preventDefault();clearTimer();computerThinking=false;const f=document.querySelector('input[name="first-player"]:checked'),first=f?f.value:HUMAN;game.start(first);createBoard();if(first===COMPUTER){computerThinking=true;message("O computador está a pensar…");render();setTimeout(computerMove,250)}else{message("A sua vez. Selecione uma peça.");render()}});
-byId("rules-button").onclick=()=>openDialog("rules-dialog");byId("draw-button").onclick=()=>{if(!game.finished)openDialog("draw-dialog")};byId("accept-draw").onclick=()=>{byId("draw-dialog").close();finish("empate")};byId("resign-button").onclick=()=>{if(!game.finished&&confirm("Desiste da partida?"))finish("desistência",COMPUTER)};byId("scores-button").onclick=()=>{scores();openDialog("scores-dialog")};byId("login-button").onclick=()=>message("A autenticação estará disponível numa próxima entrega.");document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>byId(b.dataset.close).close());createBoard();render();
+
+const SIZE = 5;
+const WHITE = "white";
+const BLACK = "black";
+const HUMAN = WHITE;
+const COMPUTER = BLACK;
+
+const opponent = color => (color === WHITE ? BLACK : WHITE);
+const byId = id => document.getElementById(id);
+
+class AlquerqueGame {
+  constructor() {
+    this.start(HUMAN);
+  }
+
+  start(firstPlayer) {
+    this.board = [
+      BLACK, BLACK, BLACK, BLACK, BLACK,
+      BLACK, BLACK, BLACK, BLACK, BLACK,
+      BLACK, BLACK, null, WHITE, WHITE,
+      WHITE, WHITE, WHITE, WHITE, WHITE,
+      WHITE, WHITE, WHITE, WHITE, WHITE
+    ];
+    this.turn = firstPlayer;
+    this.selected = null;
+    this.chainVisited = new Set();
+    this.blowable = new Set();
+    this.finished = false;
+  }
+
+  index(row, col) {
+    return row * SIZE + col;
+  }
+
+  position(index) {
+    return [Math.floor(index / SIZE), index % SIZE];
+  }
+
+  connected(from, to) {
+    const [row1, col1] = this.position(from);
+    const [row2, col2] = this.position(to);
+    const rowDistance = Math.abs(row2 - row1);
+    const colDistance = Math.abs(col2 - col1);
+
+    return rowDistance + colDistance === 1 ||
+      (rowDistance === 1 && colDistance === 1 && (row1 + col1) % 2 === 0);
+  }
+
+  apply(move) {
+    this.board[move.to] = this.board[move.from];
+    this.board[move.from] = null;
+    if (move.capture !== null) this.board[move.capture] = null;
+  }
+}
+
+const game = new AlquerqueGame();
+let computerThinking = false;
+let chainTimer = null;
+const MULTI_CAPTURE_TIME = 6000;
+
+function destinationsOn(board, from, captureOnly = false, visited = new Set()) {
+  const piece = board[from];
+  if (!piece) return [];
+
+  const [row, col] = game.position(from);
+  const moves = [];
+
+  for (let rowStep = -1; rowStep <= 1; rowStep++) {
+    for (let colStep = -1; colStep <= 1; colStep++) {
+      if (!rowStep && !colStep) continue;
+
+      const adjacentRow = row + rowStep;
+      const adjacentCol = col + colStep;
+      if (
+        adjacentRow < 0 || adjacentRow >= SIZE ||
+        adjacentCol < 0 || adjacentCol >= SIZE
+      ) continue;
+
+      const adjacent = game.index(adjacentRow, adjacentCol);
+      if (!game.connected(from, adjacent)) continue;
+
+      if (board[adjacent] === opponent(piece)) {
+        const landingRow = row + 2 * rowStep;
+        const landingCol = col + 2 * colStep;
+        if (
+          landingRow < 0 || landingRow >= SIZE ||
+          landingCol < 0 || landingCol >= SIZE
+        ) continue;
+
+        const landing = game.index(landingRow, landingCol);
+        if (
+          game.connected(adjacent, landing) &&
+          !board[landing] &&
+          !visited.has(landing)
+        ) moves.push({ to: landing, capture: adjacent });
+      } else if (!captureOnly && !board[adjacent]) {
+        const canMoveForward = piece === WHITE ? rowStep <= 0 : rowStep >= 0;
+        const finalRow = piece === WHITE ? row === 0 : row === SIZE - 1;
+        if (finalRow ? rowStep === 0 : canMoveForward) {
+          moves.push({ to: adjacent, capture: null });
+        }
+      }
+    }
+  }
+
+  return moves;
+}
+
+function destinations(from, captureOnly = false) {
+  return destinationsOn(game.board, from, captureOnly, game.chainVisited);
+}
+
+function allMoves(color) {
+  return game.board.flatMap((piece, from) =>
+    piece === color
+      ? destinations(from).map(move => ({ from, ...move }))
+      : []
+  );
+}
+
+function allCaptures(color) {
+  return game.board.flatMap((piece, from) =>
+    piece === color
+      ? destinations(from, true).map(move => ({ from, ...move }))
+      : []
+  );
+}
+
+function legalMovesForSelected() {
+  if (game.selected === null) return [];
+  return game.chainVisited.size
+    ? destinations(game.selected, true)
+    : destinations(game.selected);
+}
+
+function createBoard() {
+  const board = byId("board");
+  board.replaceChildren();
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const addLine = (row1, col1, row2, col2) => {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", `${col1 * 25}%`);
+    line.setAttribute("y1", `${row1 * 25}%`);
+    line.setAttribute("x2", `${col2 * 25}%`);
+    line.setAttribute("y2", `${row2 * 25}%`);
+    svg.append(line);
+  };
+
+  for (let index = 0; index < SIZE; index++) {
+    addLine(index, 0, index, 4);
+    addLine(0, index, 4, index);
+  }
+  [[0,0,4,4], [0,4,4,0], [0,2,2,0], [0,2,2,4], [2,0,4,2], [2,4,4,2]]
+    .forEach(line => addLine(...line));
+  board.append(svg);
+
+  for (let row = 0; row < SIZE; row++) {
+    for (let col = 0; col < SIZE; col++) {
+      const point = document.createElement("button");
+      point.type = "button";
+      point.className = "point";
+      point.style.left = `${col * 25}%`;
+      point.style.top = `${row * 25}%`;
+      point.dataset.index = game.index(row, col);
+      point.addEventListener("click", onPointClick);
+      board.append(point);
+    }
+  }
+}
+
+function setMessage(text, type = "info") {
+  const message = byId("message");
+  message.textContent = text;
+  message.className = `message ${type}`;
+}
+
+function render() {
+  const legalDestinations = new Set(legalMovesForSelected().map(move => move.to));
+  document.querySelectorAll(".point").forEach(point => {
+    const index = Number(point.dataset.index);
+    const piece = game.board[index];
+    point.classList.toggle("selected", index === game.selected);
+    point.classList.toggle("legal", legalDestinations.has(index));
+    point.classList.toggle("blowable", game.blowable.has(index));
+    point.disabled = game.finished || computerThinking || game.turn === COMPUTER;
+    point.replaceChildren();
+
+    if (piece) {
+      const stone = document.createElement("span");
+      stone.className = `piece ${piece}-piece`;
+      stone.setAttribute("aria-hidden", "true");
+      point.append(stone);
+    }
+  });
+}
+
+function clearChainTimer() {
+  if (chainTimer !== null) clearTimeout(chainTimer);
+  chainTimer = null;
+}
+
+function changeTurn(blowable = [], note = null) {
+  clearChainTimer();
+  game.selected = null;
+  game.chainVisited.clear();
+  game.blowable = new Set(blowable);
+  game.turn = opponent(game.turn);
+
+  if (!allMoves(game.turn).length && !game.blowable.size) {
+    finish("sem movimentos", opponent(game.turn));
+    return;
+  }
+
+  if (game.turn === COMPUTER) {
+    computerThinking = true;
+    setMessage(note || "O computador está a pensar…", note ? "warning" : "info");
+    render();
+    window.setTimeout(computerMove, note ? 1800 : 400);
+    return;
+  }
+
+  setMessage(note || "A sua vez. Selecione uma peça.", note ? "warning" : "info");
+  render();
+}
+
+function computerMove() {
+  if (game.blowable.size) {
+    game.board[game.blowable.values().next().value] = null;
+    game.blowable.clear();
+  }
+
+  const difficulty = byId("difficulty").value;
+  if (difficulty === "easy") {
+    const moves = allMoves(COMPUTER);
+    if (!moves.length) return finish("sem movimentos", HUMAN);
+    const capturers = new Set(allCaptures(COMPUTER).map(move => move.from));
+    const move = moves[Math.floor(Math.random() * moves.length)];
+    game.apply(move);
+    computerThinking = false;
+
+    if (move.capture === null && capturers.size) {
+      const blowable = [...capturers].map(from =>
+        from === move.from ? move.to : from
+      );
+      changeTurn(
+        blowable,
+        "O computador não capturou: uma peça pode ser soprada."
+      );
+    } else {
+      changeTurn();
+    }
+    return;
+  }
+
+  const move = AlquerqueAI.chooseMove({
+    board: game.board,
+    computer: COMPUTER,
+    human: HUMAN,
+    depth: difficulty === "hard" ? 5 : 3,
+    destinations: destinationsOn
+  });
+  move.steps.forEach(step => game.apply(step));
+  computerThinking = false;
+  changeTurn();
+}
+
+function onPointClick(event) {
+  const index = Number(event.currentTarget.dataset.index);
+  if (game.finished || computerThinking || game.turn !== HUMAN) return;
+
+  if (game.blowable.has(index) && !game.chainVisited.size) {
+    game.board[index] = null;
+    game.blowable.clear();
+    setMessage("Peça soprada! Continue o seu turno.", "success");
+    render();
+    return;
+  }
+
+  const move = legalMovesForSelected().find(item => item.to === index);
+  if (game.selected !== null && move) {
+    clearChainTimer();
+    move.from = game.selected;
+    const capturers = new Set(allCaptures(HUMAN).map(item => item.from));
+    game.blowable.clear();
+    game.apply(move);
+
+    if (move.capture !== null) {
+      game.chainVisited.add(move.from);
+      game.chainVisited.add(move.to);
+      game.selected = move.to;
+
+      if (destinations(game.selected, true).length) {
+        setMessage("Captura feita! Tem 6 segundos para continuar.", "warning");
+        render();
+        chainTimer = window.setTimeout(() => {
+          if (game.selected !== null) {
+            changeTurn([game.selected], "Captura múltipla não concluída: a peça pode ser soprada.");
+          }
+        }, MULTI_CAPTURE_TIME);
+        return;
+      }
+    }
+
+    if (move.capture === null && capturers.size) {
+      const blowable = [...capturers].map(from =>
+        from === move.from ? move.to : from
+      );
+      changeTurn(
+        blowable,
+        "Não capturou: o computador pode soprar uma peça."
+      );
+    } else {
+      changeTurn();
+    }
+    return;
+  }
+
+  if (game.chainVisited.size) {
+    setMessage("Continue a sequência com a mesma peça.", "warning");
+    return;
+  }
+  if (game.board[index] !== HUMAN) {
+    setMessage("Selecione uma peça clara.", "warning");
+    return;
+  }
+
+  game.selected = index;
+  setMessage(
+    legalMovesForSelected().length
+      ? "Escolha um ponto destacado."
+      : "Esta peça não tem movimentos possíveis."
+  );
+  render();
+}
+
+function finish(result, winner = null) {
+  clearChainTimer();
+  game.finished = true;
+  game.blowable.clear();
+  computerThinking = false;
+  const scores = JSON.parse(localStorage.getItem("alquerque-scores") || "[]");
+  scores.unshift({
+    result,
+    winner: winner === null ? "—" : winner === HUMAN ? "Claras" : "Escuras",
+    date: new Date().toLocaleDateString("pt-PT")
+  });
+  localStorage.setItem("alquerque-scores", JSON.stringify(scores.slice(0, 12)));
+  setMessage(winner ? `${winner === HUMAN ? "Venceu" : "O computador venceu"}!` : "Empate acordado.", "success");
+  render();
+}
+
+function computerAcceptsDraw() {
+  const computerPieces = game.board.filter(piece => piece === COMPUTER).length;
+  const humanPieces = game.board.filter(piece => piece === HUMAN).length;
+  const computerMoves = AlquerqueAI.getTurnMoves(
+    game.board,
+    COMPUTER,
+    destinationsOn
+  ).length;
+  const humanMoves = AlquerqueAI.getTurnMoves(
+    game.board,
+    HUMAN,
+    destinationsOn
+  ).length;
+
+  const positionScore =
+    (computerPieces - humanPieces) * 10 + computerMoves - humanMoves;
+  return positionScore <= 0;
+}
+
+function openDialog(id) {
+  byId(id).showModal();
+}
+
+function selectAccountTab(tabName) {
+  const history = tabName === "history";
+  byId("history-tab").classList.toggle("active", history);
+  byId("history-tab").setAttribute("aria-selected", history);
+  byId("register-tab").classList.toggle("active", !history);
+  byId("register-tab").setAttribute("aria-selected", !history);
+  byId("history-panel").hidden = !history;
+  byId("register-panel").hidden = history;
+}
+
+function renderScores() {
+  const scores = JSON.parse(localStorage.getItem("alquerque-scores") || "[]");
+  const body = byId("scores-body");
+  body.replaceChildren();
+  byId("scores-empty").hidden = scores.length > 0;
+  byId("scores-table").hidden = scores.length === 0;
+
+  scores.forEach(score => {
+    const row = body.insertRow();
+    [score.result, score.winner, score.date].forEach(value => {
+      row.insertCell().textContent = value;
+    });
+  });
+}
+
+byId("settings-form").addEventListener("submit", event => {
+  event.preventDefault();
+  game.start(HUMAN);
+  createBoard();
+  setMessage("A sua vez. Selecione uma peça.");
+  render();
+});
+byId("rules-button").addEventListener("click", () => openDialog("rules-dialog"));
+byId("account-button").addEventListener("click", () => {
+  renderScores();
+  selectAccountTab("history");
+  openDialog("account-dialog");
+});
+byId("history-tab").addEventListener("click", () => {
+  renderScores();
+  selectAccountTab("history");
+});
+byId("register-tab").addEventListener("click", () => selectAccountTab("register"));
+byId("login-form").addEventListener("submit", event => {
+  event.preventDefault();
+  setMessage("A autenticação estará disponível numa próxima entrega.");
+});
+byId("draw-button").addEventListener("click", () => !game.finished && openDialog("draw-dialog"));
+byId("accept-draw").addEventListener("click", () => {
+  byId("draw-dialog").close();
+  if (computerAcceptsDraw()) {
+    finish("empate");
+  } else {
+    setMessage("O computador recusou o empate.", "warning");
+  }
+});
+byId("resign-button").addEventListener("click", () => {
+  if (!game.finished && window.confirm("Desiste da partida?")) {
+    finish("desistência", COMPUTER);
+  }
+});
+document.querySelectorAll("[data-close]").forEach(button => {
+  button.addEventListener("click", () => byId(button.dataset.close).close());
+});
+
+createBoard();
+render();

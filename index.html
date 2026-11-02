@@ -12,6 +12,10 @@
     <a class="brand" href="#game" aria-label="Alquerque, início">ALQUERQUE <span>•</span></a>
     <span class="header-spacer" aria-hidden="true"></span>
     <button class="text-button" id="rules-button" type="button">Como jogar</button>
+    <button class="account-panel" id="account-button" type="button">
+      <span class="account-status"></span>
+      <span>Não registado</span>
+    </button>
   </header>
 
   <main class="layout" id="game">
@@ -32,23 +36,9 @@
         </fieldset>
         <button class="primary" type="submit">Começar partida</button>
       </form>
-
-      <section class="login" aria-labelledby="login-title" hidden>
-        <h2 id="login-title">Identificação</h2>
-        <label for="username">Utilizador</label>
-        <input id="username" type="text" autocomplete="username" placeholder="nome do jogador">
-        <label for="password">Palavra-passe</label>
-        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
-        <button type="button" id="login-button">Entrar</button>
-        <p class="small">A autenticação será ligada numa próxima entrega.</p>
-      </section>
     </aside>
 
-    <section class="game-area" aria-labelledby="game-title">
-      <div class="game-heading">
-        <div><p class="eyebrow">PARTIDA LOCAL</p><h2 id="game-title">Tabuleiro</h2></div>
-        <div class="turn-card" id="turn-card" aria-live="polite"><span class="turn-dot white"></span><span>Claras jogam</span></div>
-      </div>
+    <section class="game-area" aria-label="Jogo de Alquerque">
       <div class="board-wrap">
         <div id="board" class="board" aria-label="Tabuleiro Alquerque" role="grid"></div>
       </div>
@@ -56,7 +46,6 @@
       <div class="commands" aria-label="Comandos da partida">
         <button type="button" id="draw-button">Propor empate</button>
         <button type="button" id="resign-button" class="danger">Desistir</button>
-        <button type="button" id="scores-button">Classificações</button>
       </div>
     </section>
 
@@ -67,23 +56,41 @@
     <div class="dialog-content">
       <p>Cada jogador começa com 12 peças; o ponto central fica vazio. As claras avançam para cima e as escuras para baixo.</p>
       <h3>Movimento</h3><p>Mova uma peça para um ponto adjacente ligado por uma linha, sem recuar para a fila inicial. Na última fila, uma peça move-se apenas na horizontal.</p>
-      <h3>Captura</h3><p>Salte uma peça adversária para o ponto vazio seguinte na mesma linha. Uma captura é obrigatória e pode seguir em qualquer direção. Numa sequência não pode atravessar duas vezes o mesmo ponto nem capturar a mesma peça.</p>
-      <h3>Fim</h3><p>Perde quem ficar sem peças ou sem movimentos. O empate exige acordo dos dois jogadores. A regra do sopro está indicada nas regras do jogo, mas não é necessária quando as capturas obrigatórias são aplicadas pela interface.</p>
+      <h3>Captura</h3><p>Salte uma peça adversária para o ponto vazio seguinte na mesma linha. Depois de capturar, pode continuar a sequência com a mesma peça em qualquer direção. Numa sequência não pode atravessar duas vezes o mesmo ponto nem capturar a mesma peça.</p>
+      <h3>Regra do sopro</h3><p>Se um jogador tiver uma captura disponível e optar por outro movimento, o adversário pode soprar uma das peças que podia capturar. Depois da primeira captura de uma sequência, o jogador tem 6 segundos para continuar. Se não continuar a tempo, essa peça também pode ser soprada.</p>
+      <h3>Fim</h3><p>Perde quem ficar sem peças ou sem movimentos. O empate exige acordo dos dois jogadores.</p>
     </div>
   </dialog>
 
   <dialog id="draw-dialog" aria-labelledby="draw-title">
     <div class="dialog-head"><h2 id="draw-title">Proposta de empate</h2><button type="button" class="close" data-close="draw-dialog" aria-label="Fechar">×</button></div>
-    <p id="draw-text">Pretende terminar a partida empatada?</p>
-    <div class="dialog-actions"><button type="button" id="accept-draw" class="primary">Confirmar empate</button><button type="button" data-close="draw-dialog">Continuar a jogar</button></div>
+    <p id="draw-text">Pretende propor um empate ao computador?</p>
+    <div class="dialog-actions"><button type="button" id="accept-draw" class="primary">Propor empate</button><button type="button" data-close="draw-dialog">Continuar a jogar</button></div>
   </dialog>
 
-  <dialog id="scores-dialog" aria-labelledby="scores-title">
-    <div class="dialog-head"><h2 id="scores-title">Classificações locais</h2><button type="button" class="close" data-close="scores-dialog" aria-label="Fechar">×</button></div>
-    <p class="small">Resultados guardados neste navegador.</p>
-    <table><thead><tr><th>Resultado</th><th>Vencedor</th><th>Data</th></tr></thead><tbody id="scores-body"></tbody></table>
+  <dialog id="account-dialog" aria-labelledby="account-title">
+    <div class="dialog-head"><h2 id="account-title">Conta</h2><button type="button" class="close" data-close="account-dialog" aria-label="Fechar">×</button></div>
+    <div class="tabs" role="tablist" aria-label="Conta">
+      <button class="tab active" id="history-tab" type="button" role="tab" aria-selected="true">Classificações</button>
+      <button class="tab" id="register-tab" type="button" role="tab" aria-selected="false">Registo</button>
+    </div>
+    <section id="history-panel" class="account-content" role="tabpanel" aria-labelledby="history-tab">
+      <h3>Últimas partidas</h3>
+      <p id="scores-empty" class="small">Ainda não há partidas terminadas.</p>
+      <table id="scores-table"><thead><tr><th>Resultado</th><th>Vencedor</th><th>Data</th></tr></thead><tbody id="scores-body"></tbody></table>
+    </section>
+    <section id="register-panel" class="account-content" role="tabpanel" aria-labelledby="register-tab" hidden>
+      <form id="login-form" class="login-form">
+        <label for="username">Utilizador</label>
+        <input id="username" name="username" type="text" autocomplete="username" placeholder="nome do jogador">
+        <label for="password">Palavra-passe</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••">
+        <button class="primary" type="submit">Entrar</button>
+      </form>
+    </section>
   </dialog>
 
-  <script src="game.js"></script>
+  <script src="ai.js" defer></script>
+  <script src="game.js" defer></script>
 </body>
 </html>
